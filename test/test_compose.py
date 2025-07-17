@@ -58,6 +58,20 @@ def cemtest(bmi1 : Bmi, bmi2 : Bmi) -> Bmi:
       
       else:
         return bmi.get_value(var_name, out = output)
+      
+
+    def set_value(self, which_Bmi, set_vals : dict):
+
+      if which_Bmi == 0:
+        bmi = bmi1
+
+      elif which_Bmi == 1:
+        bmi = bmi2
+
+      for key,value in set_vals.items():
+        bmi.set_value(key,value)
+
+      return self
         
     
 
@@ -93,9 +107,6 @@ def cemtest(bmi1 : Bmi, bmi2 : Bmi) -> Bmi:
     def get_time_units(self):
       raise NotImplemented("Not implemented")
 
-
-    def set_value(self):
-      raise NotImplemented("Not implemented")
 
     def set_value_at_indices(self):
       raise NotImplemented("Not implemented")

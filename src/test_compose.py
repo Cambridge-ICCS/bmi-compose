@@ -15,8 +15,15 @@ class CouplingType(Enum):
 
 def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, interface : list[str] = []) -> Bmi:
 
-  interfaceVars = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
+  if coupling_type == CouplingType.TWO_WAY:
+    interfaceVars1 = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
+    interfaceVars2 = intersection(bmi1.get_input_var_names(), bmi2.get_output_var_names())
+  
+  
+  else:
+    interfaceVars1 = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
 
+  
 
 
 
@@ -47,7 +54,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
     def update(self):
       
-      interfaceVarsCopy = interfaceVars.copy()
+      interfaceVarsCopy = interfaceVars1.copy()
       # At most one model with have multiple cycles run
 
       bmi1.update()
@@ -74,31 +81,30 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
     def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
 
-      if name in interfaceVars:
-        val = bmi1.get_value(name, out, units, angle, at, method)
+      
+      if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
+        return  bmi1.get_value(name, out, units, angle, at, method)
 
       
-      elif name in bmi1.get_input_var_names():
-        val = bmi1.get_value(name, out, units, angle, at, method)
-
+      elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
+        return bmi2.get_value(name, out, units, angle, at, method)
       
-      elif name in bmi2.get_output_var_names():
-        val = bmi2.get_value(name, out, units, angle, at, method)
-      
-      return val
+  
 
 
 
     def set_value(self, name : str, value : int):
 
-      if name in bmi1.get_input_var_names():
-        bmi1.set_value(name, value)
+     
       
-      elif name in interfaceVars:
+      if name in interfaceVars1:
         bmi1.set_value(name,value)
         bmi2.set_value(name,value)
       
-      elif name in bmi2.get_output_var_names():
+      elif name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        bmi1.set_value(name, value)
+
+      elif name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
         bmi2.set_value(name,value)
 
       return None
@@ -233,6 +239,8 @@ def intersection(x,y):
   return [i for i in x if i in y]
 
 
+
+## composes two config files into a single one
 def composeConfig(config1:str, config2:str):
 
   with open(config1, "r") as c1:
@@ -241,10 +249,11 @@ def composeConfig(config1:str, config2:str):
   with open(config2, "r") as c2:
     conf2 = c2.read()
 
+  ## sets a marker for where the first config file ends and the second one starts
   content = conf1 + " ? " + conf2
   
   
-  
+  ## set the correct suffix if the config file is of cfg format
   if ".cfg" in config1:
 
     with open("mergedConf.cfg", "w") as merge:

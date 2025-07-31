@@ -3,17 +3,23 @@ from numpy.typing import NDArray
 from typing import Any
 from bmipy import Bmi
 from pathlib import Path
+from enum import Enum
+
+
+class CouplingType(Enum):
+  ONE_WAY = 1
+  TWO_WAY = 2
+  
 
 
 
-
-def compose(bmi1 : Bmi, bmi2 : Bmi, interface: list[str] = []) -> Bmi:
+def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, interface : list[str] = []) -> Bmi:
 
   interfaceVars = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
 
-  composedInputs = union(bmi1.get_input_var_names(), bmi2.get_input_var_names())
 
-  
+
+
   class ComposedBmi(Bmi):
 
     def setup(self, *args, **kwargs):
@@ -40,33 +46,46 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, interface: list[str] = []) -> Bmi:
       return self
 
     def update(self):
+      
+      interfaceVarsCopy = interfaceVars.copy()
       # At most one model with have multiple cycles run
+
       bmi1.update()
 
-      for i in interfaceVars:
+      if len(interface) >= 1:
+
+        for key, value in interface[0].items():
+          bmi2.set_value(key, bmi1.get_value(key, units=value))
+          interfaceVarsCopy.remove(key)
+
+
+      if len(interface) >= 2:
+        return None
+
+      for i in interfaceVarsCopy:
         
         bmi2.set_value(i, bmi1.get_value(i))
+
 
       bmi2.update()
 
       return self
     
-    def get_value(self, name : str, dest: NDArray[Any] = None):
+    def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
+
+      if name in interfaceVars:
+        val = bmi1.get_value(name, out, units, angle, at, method)
 
       
-      if name in bmi1.get_input_var_names():
-        out = bmi1.get_value(name,dest)
-      
-
-      elif name in interfaceVars:
-        out = bmi1.get_value(name,dest)
+      elif name in bmi1.get_input_var_names():
+        val = bmi1.get_value(name, out, units, angle, at, method)
 
       
       elif name in bmi2.get_output_var_names():
-        out = bmi2.get_value(name,dest)
+        val = bmi2.get_value(name, out, units, angle, at, method)
       
-      return out
+      return val
 
 
 
@@ -82,7 +101,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, interface: list[str] = []) -> Bmi:
       elif name in bmi2.get_output_var_names():
         bmi2.set_value(name,value)
 
-      return self
+      return None
         
     
 
@@ -96,12 +115,12 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, interface: list[str] = []) -> Bmi:
 
     def update_until(self):
       raise NotImplemented("Not implemented")
-
+    
     def get_input_var_names(self):
-      return composedInputs
+      return union(bmi1.get_input_var_names(), bmi2.get_input_var_names())
 
     def get_output_var_names(self):
-      return []
+      return union(bmi1.get_outpu_var_names(), bmi2.get_output_var_names())
 
     def get_current_time(self):
       raise NotImplemented("Not implemented")

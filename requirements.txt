@@ -1,3 +1,8 @@
-numpy
+python <= 3.10
+numpy <= 1.23.5
 bmi-python >= 0.3.0
 pytest
+
+If the pymt modules are downloaded through anaconda there may be an issue where they are missing the 
+relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model.
+This should solve the issue.

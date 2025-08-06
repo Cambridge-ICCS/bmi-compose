@@ -1,9 +1,0 @@
-Snow Class[SNOW CLIMATE CLASS, STURM ET AL 1995 (CODE FROM 0-7)]
-1
-Open Area or Not [1:Open, 0:forested] FOREST ZONE (MOST SNOW DEPTHS MEASURED AT OPEN SITES)
-1
-Adjust factor of precipitation [decimal]
-1.0
-Initial Snow Depth [unit:cm]
-0.0
-Initial Snow Density [unit:kg

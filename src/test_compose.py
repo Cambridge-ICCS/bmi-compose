@@ -12,6 +12,9 @@ class CouplingType(Enum):
   
 
 
+## the idea here is that the interface list passed to the compose function would be in a specified order, so interface[0] is a dictionary with units that
+## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
+## as in the gipl example the conversion is not done shared variables but rather 2 different ones.
 
 def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, interface : list[str] = []) -> Bmi:
 
@@ -52,9 +55,15 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       bmi2.initialize(*conf2)
       return self
 
+    
+    
     def update(self):
       
-      interfaceVarsCopy = interfaceVars1.copy()
+
+    
+      interfaceVars1Copy = interfaceVars1.copy()
+      interfaceVars2Copy = interfaceVars2.copy()
+
       # At most one model with have multiple cycles run
 
       bmi1.update()
@@ -63,20 +72,44 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
         for key, value in interface[0].items():
           bmi2.set_value(key, bmi1.get_value(key, units=value))
-          interfaceVarsCopy.remove(key)
+          interfaceVars1Copy.remove(key)
 
 
       if len(interface) >= 2:
         return None
 
-      for i in interfaceVarsCopy:
+      for i in interfaceVars1Copy:
         
         bmi2.set_value(i, bmi1.get_value(i))
 
 
       bmi2.update()
 
+
+      if coupling_type == CouplingType.TWO_WAY:
+        
+        bmi2.update()
+
+        if len(interface) >= 1:
+
+          for key, value in interface[0].items():
+            bmi1.set_value(key, bmi2.get_value(key, units=value))
+            interfaceVars2Copy.remove(key)
+
+
+        if len(interface) >= 2:
+          return None
+
+        for i in interfaceVars2Copy:
+          
+          bmi1.set_value(i, bmi2.get_value(i))
+
+
+        bmi1.update()
+
       return self
+
+
     
     def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
@@ -117,7 +150,9 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
 
     def finalize(self):
-      raise NotImplemented("Not implemented")
+      bmi1.finalize()
+      bmi2.finalize()
+      return self
 
     def update_until(self):
       raise NotImplemented("Not implemented")
@@ -150,24 +185,51 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
     def get_value_at_indices(self):
       raise NotImplemented("Not implemented")
 
-    def get_value_ptr(self):
-      raise NotImplemented("Not implemented")
+    def get_value_ptr(self, name):
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_value_ptr(name)
+      else:
+        return bmi2.get_value_ptr(name)
 
-    def get_var_location(self):
-      raise NotImplemented("Not implemented")
+    def get_var_location(self, name):
+      
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_var_location(name)
+      else:
+        return bmi2.get_var_location(name)
+    
+    
+    
+    def get_var_nbytes(self,name):
+      
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_var_nbytes(name)
+      else:
+        return bmi2.get_var_nbytes(name)
 
-    def get_var_nbytes(self):
-      raise NotImplemented("Not implemented")
 
-    def get_var_type(self):
-      raise NotImplemented("Not implemented")
 
-    def get_var_units(self):
-      raise NotImplemented("Not implemented")
+    def get_var_type(self,name):
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_var_type(name)
+      else:
+        return bmi2.get_var_type(name)
 
-    def get_var_itemsize(self):
-      raise NotImplemented("Not implemented")
 
+    def get_var_units(self, name : str ):
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_var_units(name)
+      else:
+        return bmi2.get_var_units(name)
+      
+
+    def get_var_itemsize(self,name):
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+        return bmi1.get_var_itemsize(name)
+      else:
+        return bmi2.get_var_itemsize(name)
+
+        
     def get_var_grid(self):
       raise NotImplemented("Not implemented")
 

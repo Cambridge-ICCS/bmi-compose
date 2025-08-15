@@ -49,6 +49,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
   
   time_step = {"max_time_step"  : float(0)}
 
+  assert bmi1.bmi.get_time_units() == bmi2.bmi.get_time_units(), "These BMIs do not share the same time step units" 
 
   timeUnits = bmi1.bmi.get_time_units()
 

@@ -17,7 +17,7 @@ class CouplingType(Enum):
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
 ## as in the gipl example the conversion is not done shared variables but rather 2 diff`erent ones.
 
-def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
+def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, conversions : list[tuple[dict, str, Any, int]] = None) -> Bmi:
 
   """Composes two BMI fitted models into a singular BMI model.
   
@@ -36,6 +36,8 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       dict : key = get variable, value = units
       str = set variable
       Any = lambda function to be used on get variables to then be set
+      int = 0 if you want to set var from bmi1 to bmi2 only, 1 if you want var to set from bmi2 to bmi1 only,
+            2 if you want var set from bmi1 to bmi2 and then from bmi2 to bmi1 
   Returns
    -------
   composed_bmi : Bmi
@@ -130,59 +132,61 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       for i in range(0, bmi_cycles["bmi1_cycles"]):
         bmi1.update()
 
-      if unitsDict != None:
 
-        for key, value in unitsDict.items():
-          bmi2.set_value(key, bmi1.get_value(key, units=value))
-          fwdVarsCopy.remove(key)
-
-      
       if conversions != None:
+
         
         for i in conversions:
           conversionVars = []
           
+          if i[3] == 0 or  i[3] == 2:
+            for key, value in i[0].items():
+              
+              varNames = bmi1.get_value(key, units = value)
+              conversionVars.append(varNames)
 
-          for key, value in i[0].items():
+            setConv = i[2](*conversionVars)
+              
             
-            varNames = bmi1.get_value(key, units = value)
-            conversionVars.append(varNames)
-
-          setConv = i[2](*conversionVars)
-            
-          bmi2.set_value(i[1], setConv) 
-          
-
+            bmi2.set_value(i[1], setConv)
+            for key,value in i[0].items():  
+              if i[1] == key:
+                fwdVarsCopy.remove(key)
 
       for i in fwdVarsCopy:
         
         bmi2.set_value(i, bmi1.get_value(i))
 
+
+
       for i in range(0, bmi_cycles["bmi2_cycles"]):
         bmi2.update()
+
       
 
       if coupling_type == CouplingType.TWO_WAY:
         bwdVarsCopy = bwdInterfaceVars.copy()
-        
-        if unitsDict != None:
-          for key, value in unitsDict.items():
-            bmi1.set_value(key, bmi2.get_value(key, units=value))
-            bwdVarsCopy.remove(key)
+
+
 
         if conversions != None:
         
           for i in conversions:
-            conversionVars = []
-            
-            for key, value in i[0].items():
+            if i[3] == 1 or i[3] == 2:
+              conversionVars = []
               
-              varNames = bmi2.get_value(key, units = value)
-              conversionVars.append(varNames)
+              for key, value in i[0].items():
+                
+                varNames = bmi2.get_value(key, units = value)
+                conversionVars.append(varNames)
 
-            setConv = i[2](*conversionVars)
-              
-            bmi1.set_value(i[1], setConv)
+              setConv = i[2](*conversionVars)
+                
+              bmi1.set_value(i[1], setConv)
+              for key,value in i[0].items():  
+                if i[1] == key:
+                  bwdVarsCopy.remove(key)
+
 
 
         for i in bwdVarsCopy:
@@ -452,7 +456,7 @@ def intersection(x,y):
 
 
 
-def composeConfig(config1:str, config2:str, suffix:str = ".txt"):
+def composeConfig(config1:str, config2:str, suffix:str = ".cfg"):
   """Merges two config fiels into a single one
   """
 

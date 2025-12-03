@@ -12,7 +12,6 @@ class CouplingType(Enum):
   TWO_WAY = 2
   
 
-
 ## the idea here is that the interface list passed to the compose function would be in a specified order, so interface[0] is a dictionary with units that
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
 ## as in the gipl example the conversion is not done shared variables but rather 2 diff`erent ones.

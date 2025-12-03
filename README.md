@@ -36,14 +36,25 @@ This example demonstrates coupling the Coastline Evolution Model (CEM) with the 
 
 The examples require the [pymt](https://github.com/csdms/pymt) library and specific model plugins.
 
-1. **Create an activate conda environment with Python 3.11** (required for `pymt_cem` compatibility):
+1. **Create a conda environment with Python 3.11** (required for `pymt_cem` compatibility):
 
 ```bash
 conda create -n pymt-cem python=3.11 pymt pymt_cem -c conda-forge -y
-conda activate pymt-cem
 ```
 
-2. **Open the notebook** (e.g., VS Code or Jupyter) and select the `pymt-cem` kernel.
+2. **Install bmi-compose into the conda environment**:
+
+```bash
+conda activate pymt-cem
+pip install -e .
+```
+
+> **Note**: If you have a Python virtual environment (venv) active, deactivate it first with `deactivate` before running the above commands, or use the conda environment's pip directly: 
+> ```bash
+> /path/to/miniconda3/envs/pymt-cem/bin/python -m pip install -e .
+> ```
+
+3. **Open the notebook** (e.g., VS Code or Jupyter) and select the `pymt-cem` kernel.
 
 ## Notes
 

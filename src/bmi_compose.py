@@ -444,7 +444,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 #helpers
 
 def union(xs, ys):
-  return (xs + tuple([y for y in ys if y not in xs]))
+  return (xs + list([y for y in ys if y not in xs]))
 
 def intersection(x,y):
   return [i for i in x if i in y]

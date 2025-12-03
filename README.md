@@ -10,18 +10,26 @@ It implements an algebraic, compositional theory for BMI models that enables cou
 # Status
 This code is in very early stages of development.
 
-# Notes
-If the pymt modules are downloaded through anaconda there may be an issue where they are missing the 
-relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model.
-This should solve the issue.
-
 # Examples
 
-The examples require the [pymt](https://github.com/csdms/pymt) library. 
+## CEM + Waves Example (`examples/cem_waves_test.ipynb`)
 
+This example demonstrates coupling the Coastline Evolution Model (CEM) with the Waves component using `bmi-compose`.
+
+The examples require the [pymt](https://github.com/csdms/pymt) library and specific model plugins.
+
+1. **Create an activate conda environment with Python 3.11** (required for `pymt_cem` compatibility):
+
+```bash
+conda create -n pymt-cem python=3.11 pymt pymt_cem -c conda-forge -y
+conda activate pymt-cem
 ```
-conda create -n pymt python=3
-config --add channels conda-forge
-conda activate pymt
-conda install pymt
-```
+
+2. **Open the notebook** (e.g., VS Code or Jupyter) and select the `pymt-cem` kernel.
+
+## Notes
+
+- The `pymt_cem` package is only available for Python 3.8-3.11, not Python 3.12+.
+- The `Waves` model is included with `pymt_cem`.
+- You may see deprecation warnings about `pkg_resources` - these can be safely ignored.
+- If the pymt modules are downloaded through conda there may be an issue where they are missing the  relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model. This should solve the issue.

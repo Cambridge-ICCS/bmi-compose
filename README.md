@@ -10,6 +10,24 @@ It implements an algebraic, compositional theory for BMI models that enables cou
 # Status
 This code is in very early stages of development.
 
+# Installation
+
+Currently, we recommend Python 3.11 as some the examples
+require it for some package depenencies.
+
+1. (Optional, but recommended) Setup a virtual environment:
+
+```bash
+python3.11 -m venv venv
+source venv/activate/bin
+```
+
+2. Install via:
+
+```bash
+pip install -e .
+```
+
 # Examples
 
 ## CEM + Waves Example (`examples/cem_waves_test.ipynb`)

@@ -178,15 +178,10 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         #return bmi2.get_value(name, out, units, angle, at, method)
 
     def set_value(self, name : str, value):
-
-      if name in fwdInterfaceVars:
-        bmi1.set_value(name,value)
-        bmi2.set_value(name,value)
-
-      elif name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
+      if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         bmi1.set_value(name, value)
 
-      elif name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
+      if name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
         bmi2.set_value(name,value)
 
       return None

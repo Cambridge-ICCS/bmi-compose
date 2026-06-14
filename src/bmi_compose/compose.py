@@ -109,6 +109,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
       assert bmi_cycles["bmi1_cycles"] == 1 or bmi_cycles["bmi2_cycles"] == 1
 
+      # Cycle the first model 
       for i in range(0, bmi_cycles["bmi1_cycles"]):
         bmi1.update()
 
@@ -118,8 +119,8 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
           bmi2.set_value(key, bmi1.get_value(key, units=value))
           fwdVarsCopy.remove(key)
 
+      # TODO: fix things here.
       if conversions != None:
-
         for i in conversions:
           conversionVars = []
 
@@ -131,15 +132,12 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
           bmi2.set_value(i[1], setConv)
 
-
-
+      # Transfer variables from the first model to the second
       for i in fwdVarsCopy:
-
         bmi2.set_value(i, bmi1.get_value(i))
 
       for i in range(0, bmi_cycles["bmi2_cycles"]):
         bmi2.update()
-
 
       if coupling_type == CouplingType.TWO_WAY:
         bwdVarsCopy = bwdInterfaceVars.copy()
@@ -172,11 +170,12 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
     def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
       if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
-        return  bmi1.get_value(name, out, units, angle, at, method)
-
+        return bmi1.get_value(name, out)
+        #return  bmi1.get_value(name, out, units, angle, at, method)
 
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
-        return bmi2.get_value(name, out, units, angle, at, method)
+        return bmi2.get_value(name, out)
+        #return bmi2.get_value(name, out, units, angle, at, method)
 
     def set_value(self, name : str, value):
 

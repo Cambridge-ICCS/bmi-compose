@@ -41,18 +41,19 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
    The composed BMI model.
   """
 
-
+  # Get the intersection of the composable interface
   fwdInterfaceVars = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
 
+  # In the case of the two way coupling, calculate back interface
   if coupling_type == CouplingType.TWO_WAY:
     bwdInterfaceVars = intersection(bmi1.get_input_var_names(), bmi2.get_output_var_names())
     
+  # TODO: consider making this a parameter
   getcontext().prec = 28
+  # Sub-model cycles per composed model cycle
   bmi_cycles = {"bmi1_cycles" : 1, "bmi2_cycles" :  1}
   
   time_step = {"max_time_step"  : float(0)}
-
-
 
   assert bmi1.bmi.get_start_time() == bmi2.bmi.get_start_time(), "These BMI's do not start at the same timestep"
 
@@ -78,21 +79,13 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         raise FileNotFoundError("One of the selected BMI's does not have a setup method.")
 
 
-    def initialize(self, dir:list[str] = ["."]):
-
-
+    def initialize(self, config_file:str):
+      conf1, conf2 = splitConf(config_file)
       
-        
-      conf1, conf2 = splitConf(dir[0])
-      
-
-
       bmi1.initialize(*conf1)
       bmi2.initialize(*conf2)
 
       assert bmi1.bmi.get_time_units() == bmi2.bmi.get_time_units(), "These BMIs do not share the same time step units" 
-
-
 
       bmi1TimeStep = Decimal(str(bmi1.bmi.get_time_step()))
       bmi2TimeStep = Decimal(str(bmi2.bmi.get_time_step()))

@@ -2,7 +2,6 @@ import pytest
 
 from bmi_compose import IdentityBmi, compose
 
-
 class CounterBmi:
   """Minimal BMI-like model for identity composition tests."""
 
@@ -56,7 +55,7 @@ class CounterBmi:
     return 0.0
 
   def get_end_time(self):
-    return float("inf")
+    return 10.0
 
   def get_time_step(self):
     return self._step
@@ -80,7 +79,7 @@ def test_right_identity_preserves_state_evolution(merged_config):
 
   model = CounterBmi(start=2.0, step=1.0, delta=0.25)
   composed = compose(model, IdentityBmi())
-  composed.initialize([str(merged_config)])
+  composed.initialize(str(merged_config))
 
   for _ in range(5):
     baseline.update()
@@ -96,7 +95,7 @@ def test_left_identity_preserves_state_evolution(merged_config):
 
   model = CounterBmi(start=1.0, step=1.0, delta=2.0)
   composed = compose(IdentityBmi(), model)
-  composed.initialize([str(merged_config)])
+  composed.initialize(str(merged_config))
 
   for _ in range(4):
     baseline.update()
@@ -109,7 +108,7 @@ def test_left_identity_preserves_state_evolution(merged_config):
 def test_identity_composition_keeps_variable_interface_for_x(merged_config):
   model = CounterBmi(start=3.0, step=1.0, delta=1.5)
   composed = compose(model, IdentityBmi())
-  composed.initialize([str(merged_config)])
+  composed.initialize(str(merged_config))
 
   composed.set_value("x", 42.0)
 

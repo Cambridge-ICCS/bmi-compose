@@ -10,7 +10,7 @@ from decimal import Decimal, getcontext
 class CouplingType(Enum):
   ONE_WAY = 1
   TWO_WAY = 2
-  
+
 
 ## the idea here is that the interface list passed to the compose function would be in a specified order, so interface[0] is a dictionary with units that
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
@@ -19,7 +19,7 @@ class CouplingType(Enum):
 def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
 
   """Composes two BMI fitted models into a singular BMI model.
-  
+
   Parameters
   ----------
   bmi1 : Bmi
@@ -54,12 +54,12 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
   # In the case of the two way coupling, calculate back interface
   if coupling_type == CouplingType.TWO_WAY:
     bwdInterfaceVars = intersection(bmi1.get_input_var_names(), bmi2.get_output_var_names())
-    
+
   # TODO: consider making this a parameter
   getcontext().prec = 28
   # Sub-model cycles per composed model cycle
   bmi_cycles = {"bmi1_cycles" : 1, "bmi2_cycles" :  1}
-  
+
   max_time_step = float(0)
 
   # Start times must align
@@ -69,7 +69,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
   class ComposedBmi(Bmi):
 
     def setup(self, *args, **kwargs):
-      
+
       if ("setup" in dir(bmi1) and "setup" in dir(bmi2)):
         defaults1 = bmi1.setup(*args, **kwargs)
         defaults2 = bmi2.setup(*args, **kwargs)
@@ -79,18 +79,18 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
         defaults = composeConfig(path1, path2)
         return defaults
-    
+
       else:
         raise FileNotFoundError("One of the selected BMI's does not have a setup method.")
 
     def initialize(self, config_file:str):
       nonlocal max_time_step
       conf1, conf2 = splitConf(config_file)
-      
+
       bmi1.initialize(*conf1)
       bmi2.initialize(*conf2)
 
-      assert bmi1.get_time_units() == bmi2.get_time_units(), "These BMIs do not share the same time step units" 
+      assert bmi1.get_time_units() == bmi2.get_time_units(), "These BMIs do not share the same time step units"
 
       bmi1TimeStep = Decimal(str(bmi1.get_time_step()))
       bmi2TimeStep = Decimal(str(bmi2.get_time_step()))
@@ -104,13 +104,13 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         max_time_step = bmi2.get_time_step()
 
       else:
-        raise ValueError("Time steps are incompatible (one is not a factor of the other): dt1 = " + str(bmi1.time_step) + " and dt2 = " + str(bmi2.time_step))      
-      
+        raise ValueError("Time steps are incompatible (one is not a factor of the other): dt1 = " + str(bmi1.time_step) + " and dt2 = " + str(bmi2.time_step))
+
       return self
-    
+
     def update(self):
       """Update the first Bmi, sets the shared variables of the second Bmi and then updates the second BMI.
-      If coupling_type is TWO_WAY will do as above but after Bmi 2 is updated the shared variables will be 
+      If coupling_type is TWO_WAY will do as above but after Bmi 2 is updated the shared variables will be
       set for the first Bmi and then the first Bmi will be updated.
       """
 
@@ -121,55 +121,55 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       for i in range(0, bmi_cycles["bmi1_cycles"]):
         bmi1.update()
 
-      # If we have a units conversion 
+      # If we have a units conversion
       if unitsDict != None:
         for key, value in unitsDict.items():
           bmi2.set_value(key, bmi1.get_value(key, units=value))
           fwdVarsCopy.remove(key)
-      
+
       if conversions != None:
-        
+
         for i in conversions:
           conversionVars = []
-          
-          for key, value in i[0].items():  
+
+          for key, value in i[0].items():
             varNames = bmi1.get_value(key, units = value)
             conversionVars.append(varNames)
 
           setConv = i[2](*conversionVars)
-            
-          bmi2.set_value(i[1], setConv) 
-          
+
+          bmi2.set_value(i[1], setConv)
+
 
 
       for i in fwdVarsCopy:
-        
+
         bmi2.set_value(i, bmi1.get_value(i))
 
       for i in range(0, bmi_cycles["bmi2_cycles"]):
         bmi2.update()
-      
+
 
       if coupling_type == CouplingType.TWO_WAY:
         bwdVarsCopy = bwdInterfaceVars.copy()
-        
+
         if unitsDict != None:
           for key, value in unitsDict.items():
             bmi1.set_value(key, bmi2.get_value(key, units=value))
             bwdVarsCopy.remove(key)
 
         if conversions != None:
-        
+
           for i in conversions:
             conversionVars = []
-            
+
             for key, value in i[0].items():
-              
+
               varNames = bmi2.get_value(key, units = value)
               conversionVars.append(varNames)
 
             setConv = i[2](*conversionVars)
-              
+
             bmi1.set_value(i[1], setConv)
 
 
@@ -177,26 +177,26 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
           bmi1.set_value(i, bmi2.get_value(i))
 
       return self
-    
+
     def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
 
-      
+
       if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
         return  bmi1.get_value(name, out, units, angle, at, method)
 
-      
+
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
         return bmi2.get_value(name, out, units, angle, at, method)
 
     def set_value(self, name : str, value : int):
 
-     
-      
+
+
       if name in fwdInterfaceVars:
         bmi1.set_value(name,value)
         bmi2.set_value(name,value)
-      
+
       elif name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         bmi1.set_value(name, value)
 
@@ -209,7 +209,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       """Get the component name."""
       if coupling_type == CouplingType.TWO_WAY:
         return (bmi1.get_component_name() + " <-> " + bmi2.get_component_name())
-      else: 
+      else:
         return (bmi1.get_component_name() + " -> " + bmi2.get_component_name())
 
     def finalize(self):
@@ -237,9 +237,9 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
             fwdVarsCopy.remove(key)
 
         for i in fwdVarsCopy:
-          
+
           bmi2.set_value(i, bmi1.get_value(i))
-        
+
         bmi2.update_until(time)
 
         if unitsDict != None:
@@ -260,16 +260,16 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
             fwdVarsCopy.remove(key)
 
         for i in fwdVarsCopy:
-          
+
           bmi2.set_value(i, bmi1.get_value(i))
-        
+
         bmi2.update_until(time)
-      
+
       return self
 
-    
-    
-    
+
+
+
     def get_input_var_names(self):
       return union(bmi1.get_input_var_names(), bmi2.get_input_var_names())
 
@@ -297,11 +297,11 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
 
     def set_value_at_indices(self, name :str, index : NDArray[Any], value : NDArray[Any]):
-      
+
       if name in fwdInterfaceVars:
         bmi1.set_value_at_indices(name, index, value)
         bmi2.set_value_at_indices(name, index, value)
-      
+
       elif name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         bmi1.set_value_at_indices(name, index, value)
 
@@ -309,14 +309,14 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         bmi2.set_value_at_indices(name, index, value)
 
     def get_value_at_indices(self, name : str, index : NDArray[Any]):
-      
+
       if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
         return  bmi1.get_value_at_indices(name, index)
 
-      
+
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
         return bmi2.get_value_at_indices(name, index)
-      
+
 
     def get_value_ptr(self, name):
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
@@ -325,14 +325,14 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         return bmi2.get_value_ptr(name)
 
     def get_var_location(self, name):
-      
+
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         return bmi1.get_var_location(name)
       else:
         return bmi2.get_var_location(name)
-    
+
     def get_var_nbytes(self,name):
-      
+
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         return bmi1.get_var_nbytes(name)
       else:
@@ -349,24 +349,24 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         return bmi1.get_var_units(name)
       else:
         return bmi2.get_var_units(name)
-      
+
     def get_var_itemsize(self,name):
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         return bmi1.get_var_itemsize(name)
       else:
         return bmi2.get_var_itemsize(name)
-  
+
     def get_var_grid(self, name):
       if name in fwdInterfaceVars:
-        assert bmi1.get_var_grid(name) == bmi2.get_var_grid(name), "These BMIs do not share the same ID for the same variable grid" 
+        assert bmi1.get_var_grid(name) == bmi2.get_var_grid(name), "These BMIs do not share the same ID for the same variable grid"
         return bmi1.get_var_grid(name)
-      
+
       elif name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
         return bmi1.get_var_grid(name)
-      
+
       else:
         return bmi2.get_var_grid(name)
-    
+
     def get_grid_type(self, grid_id):
       assert bmi1.get_grid_type(grid_id) == bmi2.get_grid_type(grid_id), "These BMIs have different types for the same variable grid"
       return bmi1.get_grid_type(grid_id)
@@ -424,7 +424,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
     def get_output_item_count(self):
       return bmi1.get_output_item_count() + bmi2.get_output_item_count()
-    
+
 
   return ComposedBmi()
 
@@ -450,8 +450,8 @@ def composeConfig(config1:str, config2:str, suffix:str = ".txt"):
 
   ## sets a marker for where the first config file ends and the second one starts
   content = conf1 + "\n\nStart of config file 2: \n\n" + conf2
-  
-  
+
+
   ## set the correct suffix if the config file is of cfg format
   confName = "mergedConf"+suffix
 
@@ -483,7 +483,7 @@ def splitConf(config_path):
       confPath1 = Path("bmi1Conf.cfg")
       confPath2 = Path("bmi2Conf.cfg")
 
-    else: 
+    else:
       with open("bmi1Conf.txt", "w") as bmi_1:
         bmi_1.write(bmi1conf)
 

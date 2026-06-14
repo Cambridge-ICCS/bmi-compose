@@ -1,10 +1,10 @@
 import numpy as np
 from numpy.typing import NDArray
 from typing import Any
+import os
 from bmipy import Bmi
 from pathlib import Path
 from enum import Enum
-import pathlib
 from decimal import Decimal, getcontext
 
 class CouplingType(Enum):
@@ -40,14 +40,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
   composed_bmi : Bmi
    The composed BMI model.
   """
-
-  # Normalise the object setup: some BMI models contain an inner .bmi field which should
-  # be used
-  if hasattr(bmi1, "bmi"):
-    bmi1 = bmi1.bmi
-  if hasattr(bmi2, "bmi"):
-    bmi2 = bmi2.bmi
-
   # Get the intersection of the composable interface
   fwdInterfaceVars = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
 
@@ -68,27 +60,26 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
   # Build the composed model internally
   class ComposedBmi(Bmi):
 
-    def setup(self, *args, **kwargs):
-
-      if ("setup" in dir(bmi1) and "setup" in dir(bmi2)):
-        defaults1 = bmi1.setup(*args, **kwargs)
-        defaults2 = bmi2.setup(*args, **kwargs)
-
-        path1 = pathlib.Path(defaults1[1],defaults1[0])
-        path2 = pathlib.Path(defaults2[1],defaults2[0])
-
-        defaults = composeConfig(path1, path2)
-        return defaults
-
-      else:
-        raise FileNotFoundError("One of the selected BMI's does not have a setup method.")
-
     def initialize(self, config_file:str):
       nonlocal max_time_step
-      conf1, conf2 = splitConf(config_file)
+      if not isinstance(config_file, (str, os.PathLike)):
+        raise TypeError("config_file must be a merged config path string")
 
-      bmi1.initialize(*conf1)
-      bmi2.initialize(*conf2)
+      conf1, conf2 = splitConf(config_file)
+      conf1_path = str(Path(conf1[1], conf1[0]))
+      conf2_path = str(Path(conf2[1], conf2[0]))
+
+      # Prefer BMI-style initialize(config_path), but keep tuple fallback for
+      # wrappers that expect (filename, directory).
+      try:
+        bmi1.initialize(conf1_path)
+      except TypeError:
+        bmi1.initialize(*conf1)
+
+      try:
+        bmi2.initialize(conf2_path)
+      except TypeError:
+        bmi2.initialize(*conf2)
 
       assert bmi1.get_time_units() == bmi2.get_time_units(), "These BMIs do not share the same time step units"
 
@@ -180,8 +171,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
 
     def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
 
-
-
       if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
         return  bmi1.get_value(name, out, units, angle, at, method)
 
@@ -189,9 +178,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
         return bmi2.get_value(name, out, units, angle, at, method)
 
-    def set_value(self, name : str, value : int):
-
-
+    def set_value(self, name : str, value):
 
       if name in fwdInterfaceVars:
         bmi1.set_value(name,value)
@@ -450,7 +437,6 @@ def composeConfig(config1:str, config2:str, suffix:str = ".txt"):
 
   ## sets a marker for where the first config file ends and the second one starts
   content = conf1 + "\n\nStart of config file 2: \n\n" + conf2
-
 
   ## set the correct suffix if the config file is of cfg format
   confName = "mergedConf"+suffix

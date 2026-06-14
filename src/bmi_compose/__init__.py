@@ -2,6 +2,7 @@
 
 from .compose import compose, union, intersection, composeConfig, splitConf, CouplingType
 from .identity import IdentityBmi
+from .pymt_compose import composed_setup
 
 __all__ = [
     "compose",
@@ -11,4 +12,5 @@ __all__ = [
     "splitConf",
     "CouplingType",
     "IdentityBmi",
+    "composed_setup",
 ]

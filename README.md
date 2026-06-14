@@ -56,6 +56,14 @@ pip install -e .
 
 3. **Open the notebook** (e.g., VS Code or Jupyter) and select the `pymt-cem` kernel.
 
+### Notebook Tips
+
+If `pymt-cem` does not appear in the notebook kernel picker, register it first:
+
+```bash
+conda run -n pymt-cem python -m ipykernel install --user --name pymt-cem --display-name "Python (pymt-cem)"
+```
+
 ## Notes
 
 - The `pymt_cem` package is only available for Python 3.8-3.11, not Python 3.12+.

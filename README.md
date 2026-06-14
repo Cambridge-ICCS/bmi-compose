@@ -1,25 +1,25 @@
 # bmi-compose
 
 The [Basic Model Interface](https://github.com/csdms/bmi) is an interface specification
-to enable coupling of models to models and models to data. The BMI definition has
-cross language support.
+to enable coupling of models to other models and data. The BMI definition has
+cross-language support.
 
 This repository provides a set of combinators for __composing__ models implementing the Basic Model Interface.
-It implements an algebraic, compositional theory for BMI models that enables coupled modles by composition.
+It implements an algebraic, compositional theory for BMI models to create coupled models easily.
 
 # Status
-This code is in very early stages of development.
+This code is in an early stage of development.
 
 # Installation
 
 Currently, we recommend Python 3.11 as some the examples
-require it for some package depenencies.
+require it for some package dependencies.
 
 1. (Optional, but recommended) Setup a virtual environment:
 
 ```bash
 python3.11 -m venv venv
-source venv/activate/bin
+source venv/bin/activate
 ```
 
 2. Install via:
@@ -61,4 +61,4 @@ pip install -e .
 - The `pymt_cem` package is only available for Python 3.8-3.11, not Python 3.12+.
 - The `Waves` model is included with `pymt_cem`.
 - You may see deprecation warnings about `pkg_resources` - these can be safely ignored.
-- If the pymt modules are downloaded through conda there may be an issue where they are missing the  relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model. This should solve the issue.
+- If the pymt modules are downloaded through conda there may be an issue where they are missing the relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model. This should solve the issue.

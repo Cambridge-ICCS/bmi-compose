@@ -102,7 +102,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
       assert bmi_cycles["bmi1_cycles"] == 1 or bmi_cycles["bmi2_cycles"] == 1
 
-      # Cycle the first model 
+      # Cycle the first model
       for i in range(0, bmi_cycles["bmi1_cycles"]):
         bmi1.update()
 
@@ -131,12 +131,12 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
         out = np.empty(1)
         bmi1.get_value(i, out)
         bmi2.set_value(i, out)
-    
+
       for i in range(0, bmi_cycles["bmi2_cycles"]):
         bmi2.update()
 
       # TODO: write a test that checks the time is now consistent.
-      
+
 
       # Transfer variables from the second model to the first
       bwdVarsCopy = bwdInterfaceVars.copy()
@@ -177,7 +177,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
       elif name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
         return bmi2.get_value(name, dest)
-      
+
       raise KeyError(f"Variable name '{name}' not found in the model.")
 
     def set_value(self, name: str, src: NDArray[Any]) -> None:
@@ -195,7 +195,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
     def get_component_name(self):
       """Get the component name."""
       return (bmi1.get_component_name() + " ; " + bmi2.get_component_name())
-      
+
     def finalize(self):
       bmi1.finalize()
       bmi2.finalize()
@@ -255,10 +255,8 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
     def get_time_step(self):
       return  max_time_step
 
-
     def get_time_units(self):
       return bmi1.get_time_units()
-
 
     def set_value_at_indices(self, name :str, index : NDArray[Any], value : NDArray[Any]):
 
@@ -279,7 +277,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
         return bmi2.get_value_at_indices(name, dest, inds)
-
 
     def get_value_ptr(self, name):
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
@@ -334,7 +331,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
     def get_grid_type(self, grid_id):
       assert bmi1.get_grid_type(grid_id) == bmi2.get_grid_type(grid_id), "These BMIs have different types for the same variable grid"
       return bmi1.get_grid_type(grid_id)
-
 
     def get_grid_edge_count(self):
       raise NotImplemented("Not implemented")

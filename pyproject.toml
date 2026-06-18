@@ -22,6 +22,7 @@ examples = [
     "pymt",
     "seaborn",
     "matplotlib",
+    "pymt_ecsimplesnow"
 ]
 
 [tool.setuptools.packages.find]

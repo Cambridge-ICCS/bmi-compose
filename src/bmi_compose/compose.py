@@ -16,7 +16,7 @@ class CouplingType(Enum):
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
 ## as in the gipl example the conversion is not done shared variables but rather 2 diff`erent ones.
 
-def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.ONE_WAY, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
+def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.TWO_WAY, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
 
   """Composes two BMI fitted models into a singular BMI model.
 
@@ -114,77 +114,90 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         bmi1.update()
 
       # If we have a units conversion
-      if unitsDict != None:
-        for key, value in unitsDict.items():
-          bmi2.set_value(key, bmi1.get_value(key, units=value))
-          fwdVarsCopy.remove(key)
+      # TODO: consider
+      # if unitsDict != None:
+      #   for key, value in unitsDict.items():
+      #     bmi2.set_value(key, bmi1.get_value(key, units=value))
+      #     fwdVarsCopy.remove(key)
 
       # TODO: fix things here.
-      if conversions != None:
-        for i in conversions:
-          conversionVars = []
+      # if conversions != None:
+      #   for i in conversions:
+      #     conversionVars = []
 
-          for key, value in i[0].items():
-            varNames = bmi1.get_value(key, units = value)
-            conversionVars.append(varNames)
+      #     for key, value in i[0].items():
+      #       varNames = bmi1.get_value(key, units = value)
+      #       conversionVars.append(varNames)
 
-          setConv = i[2](*conversionVars)
+      #     setConv = i[2](*conversionVars)
 
-          bmi2.set_value(i[1], setConv)
+      #     bmi2.set_value(i[1], setConv)
 
       # Transfer variables from the first model to the second
       for i in fwdVarsCopy:
-        bmi2.set_value(i, bmi1.get_value(i))
-
+        out = np.empty(1)
+        bmi1.get_value(i, out)
+        bmi2.set_value(i, out)
+    
       for i in range(0, bmi_cycles["bmi2_cycles"]):
         bmi2.update()
+
+      # TODO: write a test that checks the time is now consistent.
+      
 
       if coupling_type == CouplingType.TWO_WAY:
         bwdVarsCopy = bwdInterfaceVars.copy()
 
-        if unitsDict != None:
-          for key, value in unitsDict.items():
-            bmi1.set_value(key, bmi2.get_value(key, units=value))
-            bwdVarsCopy.remove(key)
+        # TODO: check
+        # if unitsDict != None:
+        #   for key, value in unitsDict.items():
+        #     bmi1.set_value(key, bmi2.get_value(key, units=value))
+        #     bwdVarsCopy.remove(key)
 
-        if conversions != None:
+        # if conversions != None:
 
-          for i in conversions:
-            conversionVars = []
+        #   for i in conversions:
+        #     conversionVars = []
 
-            for key, value in i[0].items():
+        #     for key, value in i[0].items():
 
-              varNames = bmi2.get_value(key, units = value)
-              conversionVars.append(varNames)
+        #       varNames = bmi2.get_value(key, units = value)
+        #       conversionVars.append(varNames)
 
-            setConv = i[2](*conversionVars)
+        #     setConv = i[2](*conversionVars)
 
-            bmi1.set_value(i[1], setConv)
+        #     bmi1.set_value(i[1], setConv)
 
 
         for i in bwdVarsCopy:
-          bmi1.set_value(i, bmi2.get_value(i))
+          out = np.empty(1)
+          bmi2.get_value(i, out)
+          bmi1.set_value(i, out)
 
       return self
 
-    def get_value(self, name : str, out=None, units=None, angle=None, at=None, method=None):
-
-      if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
-        return bmi1.get_value(name, out)
-        #return  bmi1.get_value(name, out, units, angle, at, method)
-
-      elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
-        return bmi2.get_value(name, out)
-        #return bmi2.get_value(name, out, units, angle, at, method)
-
-    def set_value(self, name : str, value):
+    def get_value(self, name : str, dest : NDArray[Any]) -> NDArray[Any]:
+      # Note that if a name is in both models then the value
+      # should be the same between the two
       if name in union(bmi1.get_input_var_names(), bmi1.get_output_var_names()):
-        bmi1.set_value(name, value)
+        return bmi1.get_value(name, dest)
 
-      if name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
-        bmi2.set_value(name,value)
+      elif name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
+        return bmi2.get_value(name, dest)
+      
+      raise KeyError(f"Variable name '{name}' not found in the model.")
 
-      return None
+    def set_value(self, name: str, src: NDArray[Any]) -> None:
+      if name in bmi1.get_input_var_names():
+        bmi1.set_value(name, src)
+
+      if name in bmi2.get_input_var_names():
+        bmi2.set_value(name, src)
+
+      if name not in bmi1.get_input_var_names() and name not in bmi2.get_input_var_names():
+          raise KeyError(f"Variable name '{name}' not found in the model.")
+      else:
+          return None
 
     def get_component_name(self):
       """Get the component name."""
@@ -204,7 +217,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       """
       fwdVarsCopy = fwdInterfaceVars.copy()
 
-
       if coupling_type == CouplingType.TWO_WAY:
 
         bwdVarsCopy = bwdInterfaceVars.copy()
@@ -212,7 +224,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         bmi1.update_until(time)
 
         if unitsDict != None:
-
           for key, value in unitsDict.items():
             bmi1.set_value(key, bmi2.get_value(key, units=value))
             fwdVarsCopy.remove(key)
@@ -289,14 +300,13 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
       elif name in union(bmi2.get_input_var_names(), bmi2.get_output_var_names()):
         bmi2.set_value_at_indices(name, index, value)
 
-    def get_value_at_indices(self, name : str, index : NDArray[Any]):
+    def get_value_at_indices(self, name : str, dest: NDArray[Any], inds: NDArray[Any]):
 
       if name in union(bmi1.get_input_var_names(),bmi1.get_output_var_names()):
-        return  bmi1.get_value_at_indices(name, index)
-
+        return  bmi1.get_value_at_indices(name, dest, inds)
 
       elif name in union(bmi2.get_input_var_names(),bmi2.get_output_var_names()):
-        return bmi2.get_value_at_indices(name, index)
+        return bmi2.get_value_at_indices(name, dest, inds)
 
 
     def get_value_ptr(self, name):
@@ -338,6 +348,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.
         return bmi2.get_var_itemsize(name)
 
     def get_var_grid(self, name):
+      # TODO: sort out what to do if the grid ids are difference.
       if name in fwdInterfaceVars:
         assert bmi1.get_var_grid(name) == bmi2.get_var_grid(name), "These BMIs do not share the same ID for the same variable grid"
         return bmi1.get_var_grid(name)

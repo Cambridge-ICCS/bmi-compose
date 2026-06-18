@@ -20,6 +20,7 @@ class IdentityBmi(Bmi):
   def __init__(self):
     # Self-reference for compose compatibility (compose accesses .bmi attribute)
     self.bmi = self
+    self._time = 0.0
 
   def setup(self, *args, **kwargs):
     return args, kwargs
@@ -28,6 +29,7 @@ class IdentityBmi(Bmi):
     return self
 
   def update(self):
+    self._time += self.get_time_step()
     return self
 
   def update_until(self, time):
@@ -61,7 +63,7 @@ class IdentityBmi(Bmi):
     return None
 
   def get_current_time(self):
-    return 0.0
+    return self._time
 
   def get_start_time(self):
     return 0.0

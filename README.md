@@ -70,3 +70,53 @@ conda run -n pymt-cem python -m ipykernel install --user --name pymt-cem --displ
 - The `Waves` model is included with `pymt_cem`.
 - You may see deprecation warnings about `pkg_resources` - these can be safely ignored.
 - If the pymt modules are downloaded through conda there may be an issue where they are missing the relevant metadata files. In that case go to https://github.com/pymt-lab and clone the desired model. This should solve the issue.
+
+# Running Tests
+
+Install test dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+For tests that use PyMT model plugins (especially the CEM+Waves comparison),
+use a conda environment with Python 3.11:
+
+```bash
+conda create -n pymt-cem python=3.11 pymt pymt_cem -c conda-forge -y
+conda activate pymt-cem
+python -m pip install "setuptools<81" pytest -e .
+```
+
+Why `setuptools<81`?
+
+- Current PyMT imports `pkg_resources`, which is removed from newer setuptools builds.
+- Pinning setuptools below 81 restores `pkg_resources` and allows `pymt` to import.
+
+Run the full test suite, first set the `PYTHONPATH`
+
+```bash
+export set PYTHONPATH="$PWD/src"
+```
+
+Then run the tests as:
+```bash
+python -m pytest -q
+```
+or to run a single test module:
+
+```bash
+python -m pytest -q tests/test_compose_helpers.py
+```
+
+Run the CEM+Waves notebook comparison test:
+
+```bash
+conda run -n pymt-cem python -m pytest -q -rs tests/test_cem_waves_notebook_comparison.py
+```
+
+Notes:
+
+- Some tests depend on optional PyMT model plugins and may be skipped if those models are not available in the active environment.
+- For the CEM+Waves comparison test, run from the `pymt-cem` conda environment shown above.
+- If you see Python 3.8/3.12 being used unexpectedly, verify the interpreter first with `conda run -n pymt-cem python --version`.

@@ -1,6 +1,7 @@
 import pytest
 
-from bmi_compose import IdentityBmi, compose
+from bmi_compose import IdentityBmi, compose_sequentially
+import numpy as np
 
 class CounterBmi:
   """Minimal BMI-like model for identity composition tests."""
@@ -78,14 +79,19 @@ def test_right_identity_preserves_state_evolution(merged_config):
   baseline.initialize()
 
   model = CounterBmi(start=2.0, step=1.0, delta=0.25)
-  composed = compose(model, IdentityBmi())
+  composed = compose_sequentially(model, IdentityBmi())
   composed.initialize(str(merged_config))
 
   for _ in range(5):
     baseline.update()
     composed.update()
 
-  assert composed.get_value("x") == pytest.approx(baseline.get_value("x"))
+  x = np.empty(1)
+  out = composed.get_value("x", x)
+  y = np.empty(1)
+  expected = baseline.get_value("x")
+
+  assert out == pytest.approx(expected)
   assert composed.get_current_time() == pytest.approx(baseline.get_current_time())
 
 
@@ -94,22 +100,29 @@ def test_left_identity_preserves_state_evolution(merged_config):
   baseline.initialize()
 
   model = CounterBmi(start=1.0, step=1.0, delta=2.0)
-  composed = compose(IdentityBmi(), model)
+  composed = compose_sequentially(IdentityBmi(), model)
   composed.initialize(str(merged_config))
 
   for _ in range(4):
     baseline.update()
     composed.update()
 
-  assert composed.get_value("x") == pytest.approx(baseline.get_value("x"))
-  assert model.get_current_time() == pytest.approx(baseline.get_current_time())
+  x = np.empty(1)
+  out = composed.get_value("x", x)
+  y = np.empty(1)
+  expected = baseline.get_value("x", y)
+
+  assert out == pytest.approx(expected)
+  assert composed.get_current_time() == pytest.approx(baseline.get_current_time())
 
 
 def test_identity_composition_keeps_variable_interface_for_x(merged_config):
   model = CounterBmi(start=3.0, step=1.0, delta=1.5)
-  composed = compose(model, IdentityBmi())
+  composed = compose_sequentially(model, IdentityBmi())
   composed.initialize(str(merged_config))
 
   composed.set_value("x", 42.0)
 
-  assert composed.get_value("x") == pytest.approx(42.0)
+  x = np.empty(1)
+  out = composed.get_value("x", x)
+  assert out == pytest.approx(42.0)

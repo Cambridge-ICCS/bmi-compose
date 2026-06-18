@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from typing import Any
+from typing import Any, Callable
 import os
 from bmipy import Bmi
 from pathlib import Path
@@ -12,7 +12,8 @@ from decimal import Decimal, getcontext
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
 ## as in the gipl example the conversion is not done shared variables but rather 2 diff`erent ones.
 
-def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
+def compose_sequentially(bmi1 : Bmi, bmi2 : Bmi,
+                         conversions : list[tuple[list[str], str, Any]] = []) -> Bmi:
 
   """Composes two BMI fitted models into a singular BMI model.
 
@@ -52,6 +53,82 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
   # Build the composed model internally
   class ComposedBmi(Bmi):
+
+    # Helpers
+
+    def _apply_conversions(self, source_bmi: Bmi, target_bmi: Bmi, tuple_index: int):
+      """
+      Applies the conversions from the source BMI to the target BMI based on the provided conversions list.
+      The conversions list is expected to be a list of tuples, where each tuple contains:
+      - A list of input variable names from the source BMI.
+      - An output variable name for the target BMI.
+      - A conversion function or a tuple of conversion functions (one for the forwards direction and one for the backwards direction)
+      """
+      for inputVars, outputVar, conversion in conversions:
+
+        # Apply only when conversion variables map from source outputs to target inputs.
+        relevant = True
+        for inputVar in inputVars:
+          if inputVar not in source_bmi.get_output_var_names():
+            relevant = False
+        if outputVar not in target_bmi.get_input_var_names():
+          relevant = False
+
+        if not relevant:
+          continue
+
+        conversion_func = conversion
+        if isinstance(conversion, tuple):
+          if tuple_index >= len(conversion):
+            continue
+          conversion_func = conversion[tuple_index]
+
+        if not callable(conversion_func):
+          raise TypeError("conversion must be callable")
+
+        conversionVars = []
+        for inputVar in inputVars:
+          val = np.empty(1)
+          source_bmi.get_value(inputVar, val)
+          conversionVars.append(val)
+
+        setConv = conversion_func(*conversionVars)
+        target_bmi.set_value(outputVar, setConv)
+
+    def update_runner(self, bmi1_runner: Callable[[], None], bmi2_runner: Callable[[], None]):
+      """
+      Updates the runner functions for the BMI models.
+
+      Args:
+          bmi1_runner (Callable[[], None]): The runner function for the first BMI model.
+          bmi2_runner (Callable[[], None]): The runner function for the second BMI model.
+      """
+      fwdVarsCopy = fwdInterfaceVars.copy()
+
+      bmi1_runner()
+
+      # Transfer variables from the first model to the second.
+      for i in fwdVarsCopy:
+        out = np.empty(1)
+        bmi1.get_value(i, out)
+        bmi2.set_value(i, out)
+
+      # Apply onversion from first to second
+      self._apply_conversions(bmi1, bmi2, tuple_index=0)
+
+      bmi2_runner()
+
+      # Transfer variables from the second model to the first.
+      bwdVarsCopy = bwdInterfaceVars.copy()
+      for i in bwdVarsCopy:
+        out = np.empty(1)
+        bmi2.get_value(i, out)
+        bmi1.set_value(i, out)
+
+      # Apply conversions back
+      self._apply_conversions(bmi2, bmi1, tuple_index=1)
+
+      return self
 
     def initialize(self, config_file:str):
       nonlocal max_time_step
@@ -93,81 +170,20 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
       return self
 
     def update(self):
-      """Update the first Bmi, sets the shared variables of the second Bmi and then updates the second BMI.
-      If coupling_type is TWO_WAY will do as above but after Bmi 2 is updated the shared variables will be
-      set for the first Bmi and then the first Bmi will be updated.
+      """Update the first Bmi, sets the shared variables of the second bmi, then updates the second BMI, then updates the variables shared back to the first BMI.
       """
-
-      fwdVarsCopy = fwdInterfaceVars.copy()
 
       assert bmi_cycles["bmi1_cycles"] == 1 or bmi_cycles["bmi2_cycles"] == 1
 
-      # Cycle the first model
-      for i in range(0, bmi_cycles["bmi1_cycles"]):
-        bmi1.update()
+      def bmi1_update():
+        for _ in range(0, bmi_cycles["bmi1_cycles"]):
+          bmi1.update()
 
-      # If we have a units conversion
-      # TODO: consider
-      # if unitsDict != None:
-      #   for key, value in unitsDict.items():
-      #     bmi2.set_value(key, bmi1.get_value(key, units=value))
-      #     fwdVarsCopy.remove(key)
+      def bmi2_update():
+        for _ in range(0, bmi_cycles["bmi2_cycles"]):
+          bmi2.update()
 
-      # TODO: fix things here.
-      # if conversions != None:
-      #   for i in conversions:
-      #     conversionVars = []
-
-      #     for key, value in i[0].items():
-      #       varNames = bmi1.get_value(key, units = value)
-      #       conversionVars.append(varNames)
-
-      #     setConv = i[2](*conversionVars)
-
-      #     bmi2.set_value(i[1], setConv)
-
-      # Transfer variables from the first model to the second
-      for i in fwdVarsCopy:
-        out = np.empty(1)
-        bmi1.get_value(i, out)
-        bmi2.set_value(i, out)
-
-      for i in range(0, bmi_cycles["bmi2_cycles"]):
-        bmi2.update()
-
-      # TODO: write a test that checks the time is now consistent.
-
-
-      # Transfer variables from the second model to the first
-      bwdVarsCopy = bwdInterfaceVars.copy()
-
-      # TODO: check
-      # if unitsDict != None:
-      #   for key, value in unitsDict.items():
-      #     bmi1.set_value(key, bmi2.get_value(key, units=value))
-      #     bwdVarsCopy.remove(key)
-
-      # if conversions != None:
-
-      #   for i in conversions:
-      #     conversionVars = []
-
-      #     for key, value in i[0].items():
-
-      #       varNames = bmi2.get_value(key, units = value)
-      #       conversionVars.append(varNames)
-
-      #     setConv = i[2](*conversionVars)
-
-      #     bmi1.set_value(i[1], setConv)
-
-
-      for i in bwdVarsCopy:
-        out = np.empty(1)
-        bmi2.get_value(i, out)
-        bmi1.set_value(i, out)
-
-      return self
+      return self.update_runner(bmi1_update, bmi2_update)
 
     def get_value(self, name : str, dest : NDArray[Any]) -> NDArray[Any]:
       # Note that if a name is in both models then the value
@@ -205,34 +221,13 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
       """ Updates the first Bmi until a given type, sets shared variables of the second Bmi and then updates the second Bmi.
       If coupling_type is TWO_WAY does as above but then also sets shared variables for the first Bmi and updates the first Bmi.
       """
-      fwdVarsCopy = fwdInterfaceVars.copy()
-      bwdVarsCopy = bwdInterfaceVars.copy()
+      def bmi1_runner():
+        bmi1.update_until(time)
 
-      bmi1.update_until(time)
+      def bmi2_runner():
+        bmi2.update_until(time)
 
-      if unitsDict != None:
-        for key, value in unitsDict.items():
-          bmi1.set_value(key, bmi2.get_value(key, units=value))
-          fwdVarsCopy.remove(key)
-
-      for i in fwdVarsCopy:
-
-        bmi2.set_value(i, bmi1.get_value(i))
-
-      bmi2.update_until(time)
-
-      if unitsDict != None:
-
-        for key, value in unitsDict.items():
-          bmi1.set_value(key, bmi2.get_value(key, units=value))
-          bwdVarsCopy.remove(key)
-
-      bmi1.update_until(time)
-
-      return self
-
-
-
+      return self.update_runner(bmi1_runner, bmi2_runner)
 
     def get_input_var_names(self):
       return union(bmi1.get_input_var_names(), bmi2.get_input_var_names())
@@ -387,7 +382,6 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
 
   return ComposedBmi()
-
 
 
 #helpers

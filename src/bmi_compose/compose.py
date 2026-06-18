@@ -7,16 +7,12 @@ from pathlib import Path
 from enum import Enum
 from decimal import Decimal, getcontext
 
-class CouplingType(Enum):
-  ONE_WAY = 1
-  TWO_WAY = 2
-
 
 ## the idea here is that the interface list passed to the compose function would be in a specified order, so interface[0] is a dictionary with units that
 ## the user wishes to set during the update, interface[1] could be conversions but I think this may just need to be hard coded by the user outside of the update
 ## as in the gipl example the conversion is not done shared variables but rather 2 diff`erent ones.
 
-def compose(bmi1 : Bmi, bmi2 : Bmi, coupling_type : CouplingType = CouplingType.TWO_WAY, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
+def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[tuple[dict, str, Any]] = None) -> Bmi:
 
   """Composes two BMI fitted models into a singular BMI model.
 

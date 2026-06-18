@@ -37,17 +37,14 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
    The composed BMI model.
   """
   # Get the intersection of the composable interface
+  # Forward and backward interfaces
   fwdInterfaceVars = intersection(bmi1.get_output_var_names(), bmi2.get_input_var_names())
-
-  # In the case of the two way coupling, calculate back interface
-  if coupling_type == CouplingType.TWO_WAY:
-    bwdInterfaceVars = intersection(bmi1.get_input_var_names(), bmi2.get_output_var_names())
+  bwdInterfaceVars = intersection(bmi1.get_input_var_names(), bmi2.get_output_var_names())
 
   # TODO: consider making this a parameter
   getcontext().prec = 28
   # Sub-model cycles per composed model cycle
   bmi_cycles = {"bmi1_cycles" : 1, "bmi2_cycles" :  1}
-
   max_time_step = float(0)
 
   # Start times must align
@@ -91,7 +88,7 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
         max_time_step = bmi2.get_time_step()
 
       else:
-        raise ValueError("Time steps are incompatible (one is not a factor of the other): dt1 = " + str(bmi1.time_step) + " and dt2 = " + str(bmi2.time_step))
+        raise ValueError("Time steps are incompatible (one is not a factor of the other): dt1 = " + str(bmi1TimeStep) + " and dt2 = " + str(bmi2TimeStep))
 
       return self
 
@@ -141,34 +138,34 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
       # TODO: write a test that checks the time is now consistent.
       
 
-      if coupling_type == CouplingType.TWO_WAY:
-        bwdVarsCopy = bwdInterfaceVars.copy()
+      # Transfer variables from the second model to the first
+      bwdVarsCopy = bwdInterfaceVars.copy()
 
-        # TODO: check
-        # if unitsDict != None:
-        #   for key, value in unitsDict.items():
-        #     bmi1.set_value(key, bmi2.get_value(key, units=value))
-        #     bwdVarsCopy.remove(key)
+      # TODO: check
+      # if unitsDict != None:
+      #   for key, value in unitsDict.items():
+      #     bmi1.set_value(key, bmi2.get_value(key, units=value))
+      #     bwdVarsCopy.remove(key)
 
-        # if conversions != None:
+      # if conversions != None:
 
-        #   for i in conversions:
-        #     conversionVars = []
+      #   for i in conversions:
+      #     conversionVars = []
 
-        #     for key, value in i[0].items():
+      #     for key, value in i[0].items():
 
-        #       varNames = bmi2.get_value(key, units = value)
-        #       conversionVars.append(varNames)
+      #       varNames = bmi2.get_value(key, units = value)
+      #       conversionVars.append(varNames)
 
-        #     setConv = i[2](*conversionVars)
+      #     setConv = i[2](*conversionVars)
 
-        #     bmi1.set_value(i[1], setConv)
+      #     bmi1.set_value(i[1], setConv)
 
 
-        for i in bwdVarsCopy:
-          out = np.empty(1)
-          bmi2.get_value(i, out)
-          bmi1.set_value(i, out)
+      for i in bwdVarsCopy:
+        out = np.empty(1)
+        bmi2.get_value(i, out)
+        bmi1.set_value(i, out)
 
       return self
 
@@ -197,11 +194,8 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
 
     def get_component_name(self):
       """Get the component name."""
-      if coupling_type == CouplingType.TWO_WAY:
-        return (bmi1.get_component_name() + " <-> " + bmi2.get_component_name())
-      else:
-        return (bmi1.get_component_name() + " -> " + bmi2.get_component_name())
-
+      return (bmi1.get_component_name() + " ; " + bmi2.get_component_name())
+      
     def finalize(self):
       bmi1.finalize()
       bmi2.finalize()
@@ -212,46 +206,28 @@ def compose(bmi1 : Bmi, bmi2 : Bmi, unitsDict : dict = None, conversions : list[
       If coupling_type is TWO_WAY does as above but then also sets shared variables for the first Bmi and updates the first Bmi.
       """
       fwdVarsCopy = fwdInterfaceVars.copy()
+      bwdVarsCopy = bwdInterfaceVars.copy()
 
-      if coupling_type == CouplingType.TWO_WAY:
+      bmi1.update_until(time)
 
-        bwdVarsCopy = bwdInterfaceVars.copy()
+      if unitsDict != None:
+        for key, value in unitsDict.items():
+          bmi1.set_value(key, bmi2.get_value(key, units=value))
+          fwdVarsCopy.remove(key)
 
-        bmi1.update_until(time)
+      for i in fwdVarsCopy:
 
-        if unitsDict != None:
-          for key, value in unitsDict.items():
-            bmi1.set_value(key, bmi2.get_value(key, units=value))
-            fwdVarsCopy.remove(key)
+        bmi2.set_value(i, bmi1.get_value(i))
 
-        for i in fwdVarsCopy:
+      bmi2.update_until(time)
 
-          bmi2.set_value(i, bmi1.get_value(i))
+      if unitsDict != None:
 
-        bmi2.update_until(time)
+        for key, value in unitsDict.items():
+          bmi1.set_value(key, bmi2.get_value(key, units=value))
+          bwdVarsCopy.remove(key)
 
-        if unitsDict != None:
-
-          for key, value in unitsDict.items():
-            bmi1.set_value(key, bmi2.get_value(key, units=value))
-            bwdVarsCopy.remove(key)
-
-        bmi1.update_until(time)
-
-      else:
-        bmi1.update_until(time)
-
-        if unitsDict != None:
-
-          for key, value in unitsDict.items():
-            bmi1.set_value(key, bmi2.get_value(key, units=value))
-            fwdVarsCopy.remove(key)
-
-        for i in fwdVarsCopy:
-
-          bmi2.set_value(i, bmi1.get_value(i))
-
-        bmi2.update_until(time)
+      bmi1.update_until(time)
 
       return self
 

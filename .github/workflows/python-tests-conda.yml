@@ -1,0 +1,55 @@
+name: Python Tests (Conda)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: true
+          channels: conda-forge,defaults
+          channel-priority: strict
+
+      - name: Create conda test environment
+        run: |
+          conda create -n ci \
+            python=3.11 \
+            pytest \
+            pymt \
+            pymt_cem \
+            "setuptools<81" \
+            -c conda-forge \
+            -y
+
+      - name: Install bmi-compose
+        run: |
+          conda run -n ci python -m pip install -e .
+
+      - name: Run Python tests
+        run: |
+          ran_any=0
+          if [ -d test ] && compgen -G "test/test*.py" > /dev/null; then
+            conda run -n ci python -m pytest -q test
+            ran_any=1
+          fi
+
+          if [ -d tests ] && compgen -G "tests/test*.py" > /dev/null; then
+            conda run -n ci python -m pytest -q tests
+            ran_any=1
+          fi
+
+          if [ "$ran_any" -eq 0 ]; then
+            echo "No test files found in test/ or tests/"
+            exit 1
+          fi

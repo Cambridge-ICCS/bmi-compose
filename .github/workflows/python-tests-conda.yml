@@ -25,6 +25,7 @@ jobs:
         run: |
           conda create -n ci \
             python=3.11 \
+            pip \
             pytest \
             pymt \
             pymt_cem \

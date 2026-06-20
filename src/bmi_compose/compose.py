@@ -45,7 +45,7 @@ def compose_sequentially(bmi1 : Bmi, bmi2 : Bmi,
   # TODO: consider making this a parameter
   getcontext().prec = 28
   # Sub-model cycles per composed model cycle
-  bmi_cycles = {"bmi1_cycles" : 1, "bmi2_cycles" :  1}
+  bmi_cycles = {"bmi1_cycles" : 1, "bmi2_cycles" : 1}
   max_time_step = float(0)
 
   # Start times must align

@@ -112,7 +112,7 @@ python -m pytest -q tests/test_compose_helpers.py
 Run the CEM+Waves notebook comparison test:
 
 ```bash
-conda run -n pymt-cem python -m pytest -q -rs tests/test_cem_waves_notebook_comparison.py
+python -m pytest -q -rs tests/test_cem_waves_notebook_comparison.py
 ```
 
 Notes:

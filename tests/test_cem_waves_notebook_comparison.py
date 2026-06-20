@@ -87,6 +87,8 @@ def _run_manual_notebook_style(n_steps: int):
   )
   cem.set_value(WAVE_HEIGHT_NAME, 2.0)
   cem.set_value(WAVE_PERIOD_NAME, 7.0)
+  waves.set_value(WAVE_HEIGHT_NAME, 2.0)
+  waves.set_value(WAVE_PERIOD_NAME, 7.0)
 
   for _ in range(n_steps):
     waves.update()

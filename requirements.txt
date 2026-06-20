@@ -1,3 +1,0 @@
-numpy
-bmi-python >= 0.3.0
-pytest
